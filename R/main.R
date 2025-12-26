@@ -124,3 +124,17 @@ problem5 <- products |>
 	) |>
 	slice_max(order_by = n, n = 1) |>
 	pull(phone)
+
+problem6 <- orders |>
+	left_join(items, by = "orderid") |>
+	left_join(products, by = "sku") |>
+	left_join(customers, by = "customerid") |>
+	summarise(
+		.by = c(customerid, name, phone),
+    total = sum(qty * unit_price) |> round(2),
+		wholesaletotal = sum(qty * wholesale_cost) |> round(2)
+	) |>
+	mutate(margin = (total - wholesaletotal) / wholesaletotal) |>
+	slice_min(order_by = margin, n = 1) |>
+	pull(phone)
+
