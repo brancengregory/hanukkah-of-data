@@ -4,6 +4,7 @@ library(stringr)
 library(dplyr)
 library(purrr)
 library(lubridate)
+library(tidyr)
 
 customers <- read_csv(here("data/noahs-customers.csv"))
 orders <- read_csv(here("data/noahs-orders.csv"))
@@ -158,4 +159,24 @@ problem7 <- orders |>
 	left_join(customers, by = c("customerid.y" = "customerid")) |>
 	distinct(name, phone)
 
+collectibles <- products |> filter(str_detect(sku, "^COL")) |> pull(sku)
+
+problem8 <- items |>
+	left_join(
+		orders,
+		by = "orderid"
+	) |>
+	select(customerid, sku) |>
+	nest(.by = customerid) |>
+	mutate(
+		has_all = map_lgl(
+			data,
+			\(d) {
+				all(collectibles %in% d$sku)
+			}
+		)
+	) |>
+	filter(has_all) |>
+	left_join(customers, by = "customerid") |>
+	pull(phone)
 
