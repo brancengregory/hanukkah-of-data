@@ -109,3 +109,18 @@ problem4 <- orders |>
 	slice_max(order_by = n, n = 1) |>
 	pull(phone)
 
+problem5 <- products |>
+	mutate(
+		cat = str_extract(sku, "^[A-Z]{3}")
+	) |>
+	filter(cat == "PET", str_detect(desc, "(?i)cat"), str_detect(desc, "(?i)senior")) |>
+	left_join(items, by = "sku") |>
+	left_join(orders, by = "orderid") |>
+	left_join(customers, by = "customerid") |>
+	filter(str_detect(citystatezip, "(?i)staten")) |>
+	summarise(
+		.by = c(customerid, name, phone),
+		n = n()
+	) |>
+	slice_max(order_by = n, n = 1) |>
+	pull(phone)
