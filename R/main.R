@@ -3,6 +3,7 @@ library(here)
 library(stringr)
 library(dplyr)
 library(purrr)
+library(lubridate)
 
 customers <- read_csv(here("data/noahs-customers.csv"))
 orders <- read_csv(here("data/noahs-orders.csv"))
@@ -28,6 +29,13 @@ check_phone_string <- function(s, p) {
 	}) |> unlist())
 }
 
+name_to_initials <- function(name) {
+	splits <- str_split(name, " ")
+	map(splits, \(s) str_split_i(s, "", 1)) |>
+		unlist() |>
+		str_flatten()
+}
+
 problem1 <- customers |>
 	select(name, phone) |>
 	mutate(
@@ -40,5 +48,64 @@ problem1 <- customers |>
 	filter(matches) |>
 	pull(phone)
 
+problem2 <- customers |>
+	mutate(
+		initials = map_chr(name, name_to_initials)
+	) |>
+	filter(initials == "JP") |>
+	left_join(orders, by = "customerid") |>
+	filter(year(ordered) == 2017) |>
+	left_join(items, by = "orderid") |>
+	left_join(products, by = "sku") |>
+	filter(
+		.by = customerid,
+		str_detect(desc, "(?i)coffee|bagel")
+	) |>
+	distinct(phone) |>
+	pull()
 
+is_cancer <- function(birthdate) {
+	birth_month <- month(birthdate)
+	birth_day <- day(birthdate)
+	if (birth_month == 6) {
+		birth_day >= 21
+	} else if (birth_month == 7) {
+		birth_day <= 22
+	} else {
+		FALSE
+	}
+}
+
+problem3 <- customers |>
+	mutate(
+		birth_year = year(birthdate),
+		year_of_rabbit = birth_year %in% seq(from = 2023, to = 1900, by = -12),
+		cancer = map_lgl(birthdate, is_cancer)
+	) |>
+	filter(
+		year_of_rabbit & cancer
+	) |>
+	left_join(orders, by = "customerid") |>
+	left_join(items, by = "orderid") |>
+	left_join(products, by = "sku") |>
+	filter(str_detect(desc, "(?i)rug\\b"))
+
+problem4 <- orders |>
+	arrange(ordered) |>
+	mutate(time = hms::as_hms(ordered)) |>
+	filter(
+		time < hms::as_hms("05:00:00"),
+		time > hms::as_hms("04:00:00")
+	) |>
+	left_join(items, by = "orderid") |>
+	left_join(products, by = "sku") |>
+	mutate(cat = str_extract(sku, "^[A-Z]{3}")) |>
+	filter(cat == "BKY") |>
+	left_join(customers, by = "customerid") |>
+	summarise(
+		.by = c(name, customerid, phone),
+		n = n()
+	) |>
+	slice_max(order_by = n, n = 1) |>
+	pull(phone)
 
