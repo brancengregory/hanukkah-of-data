@@ -138,3 +138,24 @@ problem6 <- orders |>
 	slice_min(order_by = margin, n = 1) |>
 	pull(phone)
 
+problem7 <- orders |>
+	filter(customerid == 4167) |>
+	mutate(ordered_date = floor_date(ordered, "day")) |>
+	left_join(items, by = "orderid") |>
+	left_join(products, by = "sku") |>
+	filter(str_detect(desc, "(?i)\\(")) |>
+	mutate(clean_desc = str_extract(desc, "(.*)(?=) \\(.*\\)", group = 1)) |>
+	inner_join(
+		orders |>
+			mutate(ordered_date = floor_date(ordered, "day")) |>
+			left_join(items, by = "orderid") |>
+			left_join(products, by = "sku") |>
+			filter(str_detect(desc, "(?i)\\(")) |>
+			mutate(clean_desc = str_extract(desc, "(.*)(?=) \\(.*\\)", group = 1)),
+		by = c("ordered_date", "clean_desc")
+	) |>
+	filter(customerid.x != customerid.y) |>
+	left_join(customers, by = c("customerid.y" = "customerid")) |>
+	distinct(name, phone)
+
+
